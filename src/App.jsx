@@ -92,19 +92,22 @@ const StatCard = ({ icon: Icon, label, value, colorClass }) => (
   </div>
 );
 
-const HeatmapCell = ({ dateObj, isCompleted, onClick }) => {
+const HeatmapCell = ({ dateObj, isCompleted, isClickable, onClick }) => {
   const dateStr = formatDate(dateObj);
-  
-  const baseClass = "w-3 h-3 m-[1.5px] rounded-[3px] transition-all duration-300 cursor-pointer";
-  const activeClass = isCompleted 
-    ? "bg-[#8FB996] hover:bg-[#77A87A] shadow-[0_0_4px_rgba(143,185,150,0.6)] scale-110" 
-    : "bg-[#EFEBE9] hover:bg-[#E6A4B4] hover:opacity-50"; 
+
+  const baseClass = "w-3 h-3 m-[1.5px] rounded-[3px] transition-all duration-300";
+  const cursorClass = isClickable ? "cursor-pointer" : "cursor-default";
+  const activeClass = isCompleted
+    ? "bg-[#8FB996] shadow-[0_0_4px_rgba(143,185,150,0.6)] scale-110"
+    : isClickable
+      ? "bg-[#EFEBE9] hover:bg-[#E6A4B4] hover:opacity-50"
+      : "bg-[#EFEBE9] opacity-60";
 
   return (
-    <div 
-      className={`${baseClass} ${activeClass}`}
-      onClick={() => onClick(dateStr)}
-      title={`${dateStr} ${isCompleted ? '(Journaled)' : ''}`}
+    <div
+      className={`${baseClass} ${cursorClass} ${activeClass}`}
+      onClick={() => isClickable && onClick(dateStr)}
+      title={`${dateStr}${isCompleted ? ' (Journaled)' : isClickable ? ' — click to mark' : ''}`}
     />
   );
 };
@@ -132,17 +135,14 @@ export default function App() {
     }
   }, [completedDates, isLoaded]);
 
-  const toggleDate = (dateStr) => {
+  const markDate = (dateStr) => {
+    if (completedDates.has(dateStr)) return;
     const newSet = new Set(completedDates);
-    if (newSet.has(dateStr)) {
-      newSet.delete(dateStr);
-    } else {
-      newSet.add(dateStr);
-    }
+    newSet.add(dateStr);
     setCompletedDates(newSet);
   };
 
-  const toggleToday = () => toggleDate(getTodayStr());
+  const markToday = () => markDate(getTodayStr());
 
   const stats = useMemo(() => calculateStats(completedDates), [completedDates]);
   const todayStr = getTodayStr();
@@ -200,7 +200,8 @@ export default function App() {
         {/* MAIN ACTION - TODAY */}
         <div className="mb-12 w-full max-w-md">
           <button
-            onClick={toggleToday}
+            onClick={markToday}
+          disabled={isTodayDone}
             className={`
               group w-full relative overflow-hidden rounded-3xl p-8 transition-all duration-500
               ${isTodayDone 
@@ -295,7 +296,8 @@ export default function App() {
                           key={weekIndex}
                           dateObj={date}
                           isCompleted={completedDates.has(formatDate(date))}
-                          onClick={toggleDate}
+                          isClickable={formatDate(date) === todayStr && !completedDates.has(formatDate(date))}
+                          onClick={markDate}
                         />
                       );
                     })}
